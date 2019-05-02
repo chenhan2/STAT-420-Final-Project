@@ -171,6 +171,35 @@ shapiro.test(resid(fit_bic_log_int))
 anova(fit_bic_log_add, fit_bic_log_int)
 ```
 
-**Log poly model**
+**Boxcox model**
 
+```{r}
+library(MASS)
+```
+
+```{r}
+boxcox(fit_full_add, plotit = TRUE, lambda = seq(-0.5, 0, by = 0.05))
+```
+
+```{r}
+fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease[-outlier_log_add, ])
+```
+
+```{r}
+fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
+```
+
+```{r}
+summary(fit_bic_boxcox)
+```
+
+```{r}
+fitted_vs_resid(fit_bic_boxcox)
+qqplot(fit_bic_boxcox)
+```
+
+```{r}
+bptest(fit_bic_boxcox)
+shapiro.test(resid(fit_bic_boxcox))
+```
 
