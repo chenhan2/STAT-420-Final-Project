@@ -1,0 +1,176 @@
+---
+title: 'STAT 420: Final Project'
+author: "Chenhan Xu (chenhan2)"
+date: 'Thursday, May 2'
+output:
+  html_document:
+    theme: readable
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+options(scipen = 1, digits = 4, width = 80, fig.align = "center")
+```
+
+```{r}
+disease = read.csv("Disease Data.csv")
+library(lmtest)
+```
+
+```{r}
+str(disease)
+```
+
+```{r}
+fitted_vs_resid = function(model) {
+  plot(fitted(model), resid(model),
+       col = "grey", pch = 20,
+       xlab = "Fitted Value",
+       ylab = "Residual",
+       main = "Fitted Value versus Residual")
+  abline(h = 0, lwd = 3, col = "dodgerblue")
+}
+qqplot = function(model) {
+  qqnorm(resid(model), col = "grey", lwd = 3)
+  qqline(resid(model), col = "dodgerblue", cex = 1.5, pch = 20)
+}
+```
+
+```{r}
+disease = subset(disease, select = - X)
+```
+
+
+```{r}
+fit_full_add = lm(Disease.Severity ~ ., data = disease)
+```
+
+```{r}
+summary(fit_full_add)
+```
+
+
+```{r}
+fitted_vs_resid(fit_full_add)
+qqplot(fit_full_add)
+```
+
+```{r}
+n = nrow(disease)
+p = length(coef(fit_full_add))
+```
+
+```{r}
+cook_full_add = cooks.distance(fit_full_add)
+outlier_full_add = which(cook_full_add > 4 / n)
+cook_full_add[outlier_full_add]
+```
+
+```{r}
+fit_full_add = lm(Disease.Severity ~ ., data = disease[-outlier_full_add,])
+```
+
+```{r}
+fitted_vs_resid(fit_full_add)
+qqplot(fit_full_add)
+```
+```{r}
+fit_aic_add = step(fit_full_add, direction = "both", trace = 0)
+``` 
+
+```{r}
+fitted_vs_resid(fit_aic_add)
+qqplot(fit_aic_add)
+```
+
+```{r}
+summary(fit_aic_add)
+```
+
+
+**Log model**
+
+```{r}
+fit_full_log_add = lm(log(Disease.Severity) ~ ., data = disease)
+```
+
+```{r}
+summary(fit_full_log_add)
+```
+
+```{r}
+fit_bic_log_add = step(fit_full_log_add, direction = "backward", k = log(n), trace = 0)
+```
+
+```{r}
+summary(fit_bic_log_add)
+```
+
+```{r}
+fitted_vs_resid(fit_bic_log_add)
+qqplot(fit_bic_log_add)
+```
+
+```{r}
+cook_bic_log = cooks.distance(fit_bic_log_add)
+outlier_log_add = which(cook_bic_log > 4 / n)
+cook_bic_log[outlier_full_add]
+```
+
+```{r}
+fit_full_log_add = lm(log(Disease.Severity) ~ ., data = disease[-outlier_log_add, ])
+```
+
+```{r}
+fit_bic_log_add = step(fit_full_log_add, direction = "backward", trace = 0, k = log(n))
+```
+
+```{r}
+summary(fit_bic_log_add)
+```
+```{r}
+fitted_vs_resid(fit_bic_log_add)
+qqplot(fit_bic_log_add)
+```
+
+```{r}
+bptest(fit_bic_log_add)
+```
+
+```{r}
+shapiro.test(resid(fit_bic_log_add))
+```
+
+**Log Interaction**
+
+```{r, eval = FALSE}
+fit_full_log_int = lm(log(Disease.Severity) ~ . ^ 2, data = disease[-outlier_log_add, ])
+```
+
+```{r, eval = FALSE}
+fit_bic_log_int = step(fit_full_log_int, direction = "backward", k = log(n), trace = 0)
+```
+
+```{r, eval = FALSE}
+summary(fit_bic_log_int)
+```
+
+```{r, eval = FALSE}
+fitted_vs_resid(fit_bic_log_int)
+qqplot(fit_bic_log_int)
+```
+
+```{r, eval = FALSE}
+bptest(fit_bic_log_int)
+shapiro.test(resid(fit_bic_log_int))
+```
+
+```{r, eval = FALSE}
+anova(fit_bic_log_add, fit_bic_log_int)
+```
+
+**Log poly model**
+
+
