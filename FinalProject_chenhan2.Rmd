@@ -6,8 +6,6 @@ output:
   html_document:
     theme: readable
     toc: yes
-  pdf_document:
-    toc: yes
 ---
 
 **Abstract**
@@ -66,16 +64,7 @@ disease = subset(disease, select = - X)
 
 Before we start fitting the model, we check if there is collinearity in between variables to see if we can reduce some variables.
 
-The following table shows the paired-correlationship, with `TRUE` meaning strong correlation and `FALSE` meaning no strong correlation.
-
-```{r, eval = FALSE}
-correlation_within = cor(disease)
-abs(correlation_within) > 0.9
-```
-
-The paired correlation coefficients show no strong paired correlations between variables.
-
-We go further to test the mulitcollinearity using **variance inflation factor (VIF)**.
+We test the mulitcollinearity using **variance inflation factor (VIF)**.
 
 ```{r}
 vif(disease)
@@ -241,41 +230,19 @@ shapiro.test(resid(fit_bic_log_add))
 
 The Fitted Value vs Residual plot and Q-Q plot look good. Furthermore, the **Breusch-Pagan Test** and **Shapiro-Wilk Test** both have a large p-value. Therefore, the model assumptions are not violated. This model is a good one.
 
-**Log Interaction**
-
-```{r, eval = FALSE}
-fit_full_log_int = lm(log(Disease.Severity) ~ . ^ 2, data = disease[-outlier_log_add, ])
-```
-
-```{r, eval = FALSE}
-fit_bic_log_int = step(fit_full_log_int, direction = "backward", k = log(n), trace = 0)
-```
-
-```{r, eval = FALSE}
-summary(fit_bic_log_int)
-```
-
-```{r, eval = FALSE}
-fitted_vs_resid(fit_bic_log_int)
-qqplot(fit_bic_log_int)
-```
-
-```{r, eval = FALSE}
-bptest(fit_bic_log_int)
-shapiro.test(resid(fit_bic_log_int))
-```
-
-```{r, eval = FALSE}
-anova(fit_bic_log_add, fit_bic_log_int)
-```
+In the following section, we will use **Boxcox Method** to find if there is a better response transformation.
 
 **Boxcox model**
-
-
 
 ```{r}
 boxcox(fit_full_add, plotit = TRUE, lambda = seq(-0.5, 0, by = 0.05))
 ```
+
+The Boxcox plot suggests that $\lambda \in [-0.4,-0.1]$ can be a good $\lambda$ for transformation. We choose $\lambda = -0.25$ as it has relative high log-Likelihood.
+
+Therefore, the transformation of the response is $y^{-0.25} - 1 \over -0.25$.
+
+Fit a linear model based on this response transformation and use **BIC** to find a proper smaller model.
 
 ```{r}
 fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease)
@@ -285,15 +252,13 @@ fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease)
 fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
 ```
 
-```{r}
-summary(fit_bic_boxcox)
-```
+Again, us **Cook's Distance** to identify and remove the influential unusual observations. Rebuild the model based on the modified dataset.
 
 ```{r}
 cook_boxcox = cooks.distance(fit_bic_boxcox)
 outlier_boxcox = which(cook_boxcox > 4 / n)
-cook_boxcox[outlier_boxcox]
 ```
+
 ```{r}
 fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease[-outlier_boxcox,])
 ```
@@ -302,10 +267,15 @@ fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease[-
 fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
 ```
 
+Summary the new model.
 
 ```{r}
 summary(fit_bic_boxcox)
 ```
+
+The new model has 10 predictors all of which are significant in the model. The $R^2$ is 0.757 in the model. The statistics of the model look pretty good.
+
+Then do the test on the model assumptions.
 
 ```{r}
 fitted_vs_resid(fit_bic_boxcox)
@@ -317,18 +287,12 @@ bptest(fit_bic_boxcox)
 shapiro.test(resid(fit_bic_boxcox))
 ```
 
+The Fitted Value vs Residual plot looks good, the **linear assumption** and **constant variance assumption** are not violated. The Q-Q plot also looks good, the data points fall along the normal line. **Normality assumption** is also not violated.
 
-```{r}
+Furthermore, the Breusch-Pagan test and Shapiro-Wilk test both have large p-value. None of the assumptions is violated.
 
-all_boxcox_models = summary(regsubsets(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease))
-all_boxcox_models$which
-```
+The $R^2$ of the model suggests that 75.7% of the data can be explained by this model. 
 
-```{r}
-fit_boxcox_small = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ PCDH12 + DLG5 + SHISA5 + AF161342 + F2R + PLEKHM1 + PPAN + LOC440104, data = disease[-outlier_log_add,])
-```
+**Conclusion**
 
-```{r, eval = FALSE}
-anova(fit_boxcox_small, fit_boxcox)
-```
 
