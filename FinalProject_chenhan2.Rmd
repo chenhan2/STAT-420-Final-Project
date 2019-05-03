@@ -36,6 +36,9 @@ qqplot = function(model) {
   qqnorm(resid(model), col = "grey", lwd = 3)
   qqline(resid(model), col = "dodgerblue", cex = 1.5, pch = 20)
 }
+calc_loocv_rmse = function(model) {
+  sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+}
 ```
 
 ```{r}
@@ -230,12 +233,30 @@ boxcox(fit_full_add, plotit = TRUE, lambda = seq(-0.5, 0, by = 0.05))
 ```
 
 ```{r}
-fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease[-outlier_log_add, ])
+fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease)
 ```
 
 ```{r}
 fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
 ```
+
+```{r}
+summary(fit_bic_boxcox)
+```
+
+```{r}
+cook_boxcox = cooks.distance(fit_bic_boxcox)
+outlier_boxcox = which(cook_boxcox > 4 / n)
+cook_boxcox[outlier_boxcox]
+```
+```{r}
+fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease[-outlier_boxcox,])
+```
+
+```{r}
+fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
+```
+
 
 ```{r}
 summary(fit_bic_boxcox)
@@ -249,5 +270,20 @@ qqplot(fit_bic_boxcox)
 ```{r}
 bptest(fit_bic_boxcox)
 shapiro.test(resid(fit_bic_boxcox))
+```
+
+
+```{r}
+library(leaps)
+all_boxcox_models = summary(regsubsets(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease))
+all_boxcox_models$which
+```
+
+```{r}
+fit_boxcox_small = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ PCDH12 + DLG5 + SHISA5 + AF161342 + F2R + PLEKHM1 + PPAN + LOC440104, data = disease[-outlier_log_add,])
+```
+
+```{r, eval = FALSE}
+anova(fit_boxcox_small, fit_boxcox)
 ```
 
