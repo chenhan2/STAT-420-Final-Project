@@ -12,7 +12,7 @@ output:
 
 **Abstract**
 
-In this report, we will try to fit a proper linear regression model to predict the `Disease.Severity` in the `disease` dataset using other variables. We will first check the multicollinearity of the dataset and try to reduce the predictors. Then we will fit the additive and interaction full linear models and try to interpret and diagnose them with different methods. As these two model do not fit the data well, we try to use response transformation to find a better one. For each family of models, we use Bayesian Information Criterion (BIC) to do the variable selection. We prefer BIC here instead of AIC because with large sample data size, BIC tends to find a smaller model that can be more interpretable. For each model we find using BIC, we will use Cook's Distance to remove the influencial unusual observation. Test of model assumption will be given to each of the models. Finally, this report will arrive at a proper model for the dataset.
+In this report, we will try to fit a proper linear regression model to predict the `Disease.Severity` in the `disease` dataset using other variables. We will first check the **multicollinearity** of the dataset and try to reduce the predictors. Then we will fit the full **additive** linear models and try to interpret and diagnose them with different methods. As these two model do not fit the data well, we try to use **response transformation** to find a better one. For each family of models, we use **Bayesian Information Criterion (BIC)** to do the variable selection. We prefer BIC here instead of AIC because with large sample data size, BIC tends to find a smaller model that can be more interpretable. For each model we find using BIC, we will use **Cook's Distance** to remove the influencial unusual observation. Test of model assumption will be given to each of the models. Finally, this report will arrive at a proper model for the dataset.
 
 **Setup of the project**
 
@@ -50,34 +50,42 @@ calc_loocv_rmse = function(model) {
 }
 ```
 
+**Summary Statistics and Data Visualization**
 
-```{r}
-summary(disease)
-```
+First, we look at the variales of the data frame.
 
 ```{r}
 str(disease)
 ```
 
-
+We noticed that `X` variable is the index of observations, so we remove it from the data frame.
 
 ```{r}
 disease = subset(disease, select = - X)
 ```
 
-```{r}
-#pairs(disease)
+Before we start fitting the model, we check if there is collinearity in between variables to see if we can reduce some variables.
+
+The following table shows the paired-correlationship, with `TRUE` meaning strong correlation and `FALSE` meaning no strong correlation.
+
+```{r, eval = FALSE}
 correlation_within = cor(disease)
+abs(correlation_within) > 0.9
 ```
 
-```{r}
-abs(correlation_within) > 0.8
-```
+The paired correlation coefficients show no strong paired correlations between variables.
+
+We go further to test the mulitcollinearity using **variance inflation factor (VIF)**.
 
 ```{r}
 vif(disease)
 vif(disease)[which(vif(disease) > 5)]
 ```
+
+We notice that predictors `F2R` and `PLEKHM1` have **vif** greater than 5. Therefore, we look at variable added plots and partial correlation coefficients for these two predictors.
+
+First, we focus on `F2R`.
+
 ```{r}
 fit_full_without_F2R = lm(Disease.Severity ~ . - F2R, data = disease)
 fit_F2R = lm(F2R ~ . - Disease.Severity, data = disease)
@@ -95,6 +103,9 @@ abline(v = 0, lty = 2)
 abline(lm(resid(fit_full_without_F2R) ~ resid(fit_F2R)),
        col = "darkorange", lwd = 2)
 ```
+
+Next, we look at `PLEKHM1`.
+
 ```{r}
 fit_full_without_PLEKHM1 = lm(Disease.Severity ~ . - PLEKHM1, data = disease)
 fit_PLEKHM1 = lm(PLEKHM1 ~ . - Disease.Severity, data = disease)
@@ -113,6 +124,12 @@ abline(lm(resid(fit_full_without_PLEKHM1) ~ resid(fit_PLEKHM1)),
        col = "darkorange", lwd = 2)
 ```
 
+The partial correlation coefficients of both predictors are unignorable. The variable added plots also show that the variations of `F2R` and `PLEKHM1` have correlation with other predictors. This means that their variations are explained by other predictors. Hence, we prefer to keep these two predictors in the model.
+
+**Fit the Full Model**
+
+We try to fit the full additive model.
+
 ```{r}
 fit_full_add = lm(Disease.Severity ~ ., data = disease)
 ```
@@ -121,11 +138,16 @@ fit_full_add = lm(Disease.Severity ~ ., data = disease)
 summary(fit_full_add)
 ```
 
+The full additive model contains 21 coefficients. The `F` test shows that the model is significant. However, the single variable t-tests show that many of the predictors in the full additive model are insignificant. 
+
+Next, we check if the model violate some of the assumptions.
 
 ```{r}
 fitted_vs_resid(fit_full_add)
 qqplot(fit_full_add)
 ```
+
+We notice that there are some unusual data points in the plot, so we use the **Cook's Distance** to identify and remove them.
 
 ```{r}
 n = nrow(disease)
@@ -142,23 +164,29 @@ cook_full_add[outlier_full_add]
 fit_full_add = lm(Disease.Severity ~ ., data = disease[-outlier_full_add,])
 ```
 
+Now, we removed the unusual observations and let's look back to the two plots. 
+
 ```{r}
 fitted_vs_resid(fit_full_add)
 qqplot(fit_full_add)
 ```
+
+Through the plots, we clearly notice that the **Linear Assumption**, **Constant Variance Assumption** and **Normality Assumptions** are all violated. In this way, this model is terrible.
+
+We use **BIC** to try to find a better smaller additive model.
+
 ```{r}
-fit_aic_add = step(fit_full_add, direction = "both", trace = 0)
+fit_bic_add = step(fit_full_add, direction = "backward", trace = 0, k = log(n))
 ``` 
 
 ```{r}
-fitted_vs_resid(fit_aic_add)
-qqplot(fit_aic_add)
+fitted_vs_resid(fit_bic_add)
+qqplot(fit_bic_add)
 ```
 
-```{r}
-summary(fit_aic_add)
-```
+However, the plots tells that the smaller additive model is again terrible. This matches our expectation since we know that simply removing predictors may not help dealing with the **linear**, **constant variance** and **normality** assumptions.
 
+In the next few sections, we will perform response transformation to find a better model.
 
 **Log model**
 
