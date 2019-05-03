@@ -42,6 +42,54 @@ qqplot = function(model) {
 disease = subset(disease, select = - X)
 ```
 
+```{r}
+#pairs(disease)
+correlation_within = cor(disease)
+```
+
+```{r}
+abs(correlation_within) > 0.8
+```
+
+```{r}
+library(faraway)
+vif(disease)
+vif(disease)[which(vif(disease) > 5)]
+```
+```{r}
+fit_full_without_F2R = lm(Disease.Severity ~ . - F2R, data = disease)
+fit_F2R = lm(F2R ~ . - Disease.Severity, data = disease)
+```
+```{r}
+cor(resid(fit_full_without_F2R), resid(fit_F2R))
+```
+```{r}
+plot(resid(fit_full_without_F2R) ~ resid(fit_F2R),
+     col = "dodgerblue", pch = 20,
+     xlab = "Residuals, Added Predictor", 
+     ylab = "Residuals, Original Model")
+abline(h = 0, lty = 2)
+abline(v = 0, lty = 2)
+abline(lm(resid(fit_full_without_F2R) ~ resid(fit_F2R)),
+       col = "darkorange", lwd = 2)
+```
+```{r}
+fit_full_without_PLEKHM1 = lm(Disease.Severity ~ . - PLEKHM1, data = disease)
+fit_PLEKHM1 = lm(PLEKHM1 ~ . - Disease.Severity, data = disease)
+```
+```{r}
+cor(resid(fit_full_without_PLEKHM1), resid(fit_PLEKHM1))
+```
+```{r}
+plot(resid(fit_full_without_PLEKHM1) ~ resid(fit_PLEKHM1),
+     col = "dodgerblue", pch = 20,
+     xlab = "Residuals, Added Predictor", 
+     ylab = "Residuals, Original Model")
+abline(h = 0, lty = 2)
+abline(v = 0, lty = 2)
+abline(lm(resid(fit_full_without_PLEKHM1) ~ resid(fit_PLEKHM1)),
+       col = "darkorange", lwd = 2)
+```
 
 ```{r}
 fit_full_add = lm(Disease.Severity ~ ., data = disease)
