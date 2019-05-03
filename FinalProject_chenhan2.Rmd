@@ -138,7 +138,7 @@ fit_full_add = lm(Disease.Severity ~ ., data = disease)
 summary(fit_full_add)
 ```
 
-The full additive model contains 21 coefficients. The `F` test shows that the model is significant. However, the single variable t-tests show that many of the predictors in the full additive model are insignificant. 
+The full additive model contains 21 coefficients. The F-test shows that the model is significant. However, the single variable t-tests show that many of the predictors in the full additive model are insignificant. 
 
 Next, we check if the model violate some of the assumptions.
 
@@ -164,7 +164,7 @@ cook_full_add[outlier_full_add]
 fit_full_add = lm(Disease.Severity ~ ., data = disease[-outlier_full_add,])
 ```
 
-Now, we removed the unusual observations and let's look back to the two plots. 
+Now, we removed the unusual observations and let's look back intto the two plots. 
 
 ```{r}
 fitted_vs_resid(fit_full_add)
@@ -190,25 +190,16 @@ In the next few sections, we will perform response transformation to find a bett
 
 **Log model**
 
+The Fitted Value vs Residual plot shown above suggests that a **log-transformation** on response may be helpful.
+
 ```{r}
 fit_full_log_add = lm(log(Disease.Severity) ~ ., data = disease)
 ```
 
-```{r}
-summary(fit_full_log_add)
-```
+We fit a full log model and then use **BIC** to find a proper smaller model.
 
 ```{r}
 fit_bic_log_add = step(fit_full_log_add, direction = "backward", k = log(n), trace = 0)
-```
-
-```{r}
-summary(fit_bic_log_add)
-```
-
-```{r}
-fitted_vs_resid(fit_bic_log_add)
-qqplot(fit_bic_log_add)
 ```
 
 ```{r}
@@ -216,6 +207,8 @@ cook_bic_log = cooks.distance(fit_bic_log_add)
 outlier_log_add = which(cook_bic_log > 4 / n)
 cook_bic_log[outlier_full_add]
 ```
+
+The **Cook's Distance** tells that there are some influential observations in the dataset, so we remove them to get a better estimation.
 
 ```{r}
 fit_full_log_add = lm(log(Disease.Severity) ~ ., data = disease[-outlier_log_add, ])
@@ -228,6 +221,11 @@ fit_bic_log_add = step(fit_full_log_add, direction = "backward", trace = 0, k = 
 ```{r}
 summary(fit_bic_log_add)
 ```
+
+The backward search suggests a model with 10 predictors as above. Single variable t-tests show that all the predictors are significant. The F-test shows that the model is significant.
+
+Now, let's look at the model assumptions.
+
 ```{r}
 fitted_vs_resid(fit_bic_log_add)
 qqplot(fit_bic_log_add)
@@ -240,6 +238,8 @@ bptest(fit_bic_log_add)
 ```{r}
 shapiro.test(resid(fit_bic_log_add))
 ```
+
+The Fitted Value vs Residual plot and Q-Q plot look good. Furthermore, the **Breusch-Pagan Test** and **Shapiro-Wilk Test** both have a large p-value. Therefore, the model assumptions are not violated. This model is a good one.
 
 **Log Interaction**
 
