@@ -8,11 +8,11 @@ output:
     toc: yes
 ---
 
-**Abstract**
+### Abstract
 
 In this report, we will try to fit a proper linear regression model to predict the `Disease.Severity` in the `disease` dataset using other variables. We will first check the **multicollinearity** of the dataset and try to reduce the predictors. Then we will fit the full **additive** linear models and try to interpret and diagnose them with different methods. As these two model do not fit the data well, we try to use **response transformation** to find a better one. For each family of models, we use **Bayesian Information Criterion (BIC)** to do the variable selection. We prefer BIC here instead of AIC because with large sample data size, BIC tends to find a smaller model that can be more interpretable. For each model we find using BIC, we will use **Cook's Distance** to remove the influencial unusual observation. Test of model assumption will be given to each of the models. Finally, this report will arrive at a proper model for the dataset.
 
-**Setup of the project**
+### Setup of the project
 
 ```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
 options(scipen = 1, digits = 4, width = 80, fig.align = "center")
@@ -21,11 +21,14 @@ options(scipen = 1, digits = 4, width = 80, fig.align = "center")
 Import the `disease` dataset and the packages that contain the necessary functions for this project. 
 
 ```{r, warning = FALSE, message = FALSE}
-disease = read.csv("Disease Data.csv")
-library(lmtest)
 library(faraway)
+library(lmtest)
 library(MASS)
 library(leaps)
+```
+
+```{r}
+disease = read.csv("Disease Data.csv")
 ```
 
 Define some of the functions that we may need for convenience.
@@ -48,7 +51,7 @@ calc_loocv_rmse = function(model) {
 }
 ```
 
-**Summary Statistics and Data Visualization**
+### Summary Statistics and Data Visualization
 
 First, we look at the variales of the data frame.
 
@@ -56,10 +59,32 @@ First, we look at the variales of the data frame.
 str(disease)
 ```
 
-We noticed that `X` variable is the index of observations, so we remove it from the data frame.
+We noticed that `X` variable is the index of observations. In this case, the data of different patients is independent with the index, so we remove `X` from the data frame.
 
 ```{r}
 disease = subset(disease, select = - X)
+```
+
+```{r}
+hist(disease$Disease.Severity, breaks = 50,
+     border = "dodgerblue")
+```
+
+The histogram shows the distribution of `Disease.Severity` is right skewed.
+
+```{r}
+boxplot(disease$Disease.Severity, main = "Boxplot of Disease Severity")
+```
+
+The boxplot shows that the median of `Disease.Severity` is slightly over 2, but there are a lot of outliers in the dataset.
+
+The table below shows some important statistics of `Disease.Severity`.
+
+```{r}
+data_analysis = data.frame(
+  "Measure" = c("Mean", "Median", "Variance", "Standard Deviation", "Max", "Min"),
+  "Result" = c(mean(disease$Disease.Severity), median(disease$Disease.Severity), var(disease$Disease.Severity), sd(disease$Disease.Severity), max(disease$Disease.Severity), min(disease$Disease.Severity)))
+knitr::kable(data_analysis)
 ```
 
 Before we start fitting the model, we check if there is collinearity in between variables to see if we can reduce some variables.
