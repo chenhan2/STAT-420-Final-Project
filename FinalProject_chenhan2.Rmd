@@ -10,7 +10,7 @@ output:
 
 ### Abstract
 
-In this report, we will try to fit a proper linear regression model to predict the `Disease.Severity` in the `disease` dataset using other variables. We will first check the **multicollinearity** of the dataset and try to reduce the predictors. Then we will fit the full **additive** linear models and try to interpret and diagnose them with different methods. As these two model do not fit the data well, we try to use **response transformation** to find a better one. For each family of models, we use **Bayesian Information Criterion (BIC)** to do the variable selection. We prefer BIC here instead of AIC because with large sample data size, BIC tends to find a smaller model that can be more interpretable. For each model we find using BIC, we will use **Cook's Distance** to remove the influencial unusual observation. Test of model assumption will be given to each of the models. Finally, this report will arrive at a proper model for the dataset.
+This report will try to fit a proper linear regression model to predict the `Disease.Severity` in the `disease` dataset using other variables. We will first check the **multicollinearity** of the dataset and try to reduce the predictors. Then we will fit the full **additive** linear models and try to interpret and diagnose them with different methods. **Cook's Distance** will be used to remove the influencial unusual observation. As the model do not fit the data well, **response transformation** is used to find a better one. For each family of models, we use **Bayesian Information Criterion (BIC)** to do the variable selection. BIC is preferred here instead of AIC because with large sample data size, BIC tends to find a smaller model that can be more interpretable. Test of model assumption will be given to each of the models. A comparison is given to different models to find a best one. We will also use **Exhuasitive Search** to identify if the search miss the best model. Finally, this report will arrive at a proper model for the dataset.
 
 ### Setup of the project
 
@@ -89,18 +89,17 @@ data_analysis = data.frame(
 knitr::kable(data_analysis)
 ```
 
-Before we start fitting the model, we check if there is collinearity in between variables to see if we can reduce some variables.
+Before starting fitting the model, check if there is collinearity in between variables to see if we can reduce some variables.
 
-We test the mulitcollinearity using **variance inflation factor (VIF)**.
+Test the mulitcollinearity using **variance inflation factor (VIF)**.
 
 ```{r}
-vif(disease)
 vif(disease)[which(vif(disease) > 5)]
 ```
 
-We notice that predictors `F2R` and `PLEKHM1` have **vif** greater than 5. Therefore, we look at variable added plots and partial correlation coefficients for these two predictors.
+Notice that predictors `F2R` and `PLEKHM1` have **vif** greater than 5. Therefore, look at variable added plots and partial correlation coefficients for these two predictors.
 
-First, we focus on `F2R`.
+First, focus on `F2R`.
 
 ```{r}
 fit_full_without_F2R = lm(Disease.Severity ~ . - F2R, data = disease)
@@ -120,7 +119,7 @@ abline(lm(resid(fit_full_without_F2R) ~ resid(fit_F2R)),
        col = "darkorange", lwd = 2)
 ```
 
-Next, we look at `PLEKHM1`.
+Next, look at `PLEKHM1`.
 
 ```{r}
 fit_full_without_PLEKHM1 = lm(Disease.Severity ~ . - PLEKHM1, data = disease)
@@ -144,7 +143,7 @@ The partial correlation coefficients of both predictors are unignorable. The var
 
 ### Full Model
 
-We try to fit the full additive model.
+Try to fit the full additive model.
 
 ```{r}
 fit_full_add = lm(Disease.Severity ~ ., data = disease)
@@ -156,14 +155,14 @@ summary(fit_full_add)
 
 The full additive model contains 21 coefficients. The F-test shows that the model is significant. However, the single variable t-tests show that many of the predictors in the full additive model are insignificant. 
 
-Next, we check if the model violate some of the assumptions.
+Next, check if the model violate some of the assumptions.
 
 ```{r}
 fitted_vs_resid(fit_full_add)
 qqplot(fit_full_add)
 ```
 
-We notice that there are some unusual data points in the plot, so we use the **Cook's Distance** to identify and remove them.
+Notice that there are some unusual data points in the plot, so use the **Cook's Distance** to identify and remove them.
 
 ```{r}
 n = nrow(disease)
@@ -173,10 +172,9 @@ p = length(coef(fit_full_add))
 ```{r}
 cook_full_add = cooks.distance(fit_full_add)
 outlier = which(cook_full_add > 4 / n)
-cook_full_add[outlier]
 ```
 
-Because all of our model is based on the full linear model, we drop the unusual influential observations based on the full linear model.
+Because all of our model is based on the full linear model, drop the unusual influential observations based on the full linear model.
 
 ```{r}
 disease = disease[-outlier,]
@@ -186,16 +184,16 @@ disease = disease[-outlier,]
 fit_full_add = lm(Disease.Severity ~ ., data = disease)
 ```
 
-Now, we removed the unusual observations and let's look back intto the two plots. 
+Now, removed the unusual observations and look back intto the two plots. 
 
 ```{r}
 fitted_vs_resid(fit_full_add)
 qqplot(fit_full_add)
 ```
 
-Through the plots, we clearly notice that the **Linear Assumption**, **Constant Variance Assumption** and **Normality Assumptions** are all violated. In this way, this model is terrible.
+Through the plots, it is clearly noticed that the **Linear Assumption**, **Constant Variance Assumption** and **Normality Assumptions** are all violated. In this way, this model is terrible.
 
-We use **BIC** to try to find a better smaller additive model.
+Use **BIC** to try to find a better smaller additive model.
 
 ```{r}
 fit_bic_add = step(fit_full_add, direction = "backward", trace = 0, k = log(n))
@@ -218,7 +216,7 @@ The Fitted Value vs Residual plot shown above suggests that a **log-transformati
 fit_full_log_add = lm(log(Disease.Severity) ~ ., data = disease)
 ```
 
-We fit a full log model and then use **BIC** to find a proper smaller model.
+Fit a full log model and then use **BIC** to find a proper smaller model.
 
 ```{r}
 fit_bic_log_add = step(fit_full_log_add, direction = "backward", k = log(n), trace = 0)
@@ -245,7 +243,7 @@ summary(fit_bic_log_add)
 
 The backward search suggests a model with 10 predictors as above. Single variable t-tests show that all the predictors are significant. The F-test shows that the model is significant.
 
-Now, let's look at the model assumptions.
+Now, look at the model assumptions.
 
 ```{r}
 fitted_vs_resid(fit_bic_log_add)
@@ -271,7 +269,7 @@ In the following section, we will use **Boxcox Method** to find if there is a be
 boxcox(fit_full_add, plotit = TRUE, lambda = seq(-0.5, 0, by = 0.05))
 ```
 
-The Boxcox plot suggests that $\lambda \in [-0.4,-0.1]$ can be a good $\lambda$ for transformation. We choose $\lambda = -0.25$ as it has relative high log-Likelihood.
+The Boxcox plot suggests that $\lambda \in [-0.4,-0.1]$ can be a good $\lambda$ for transformation. Choose $\lambda = -0.25$ as it has relative high log-Likelihood.
 
 Therefore, the transformation of the response is $y^{-0.25} - 1 \over -0.25$.
 
@@ -285,8 +283,6 @@ fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease)
 fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
 ```
 
-Again, us **Cook's Distance** to identify and remove the influential unusual observations. Rebuild the model based on the modified dataset.
-
 ```{r, echo = FALSE, eval = FALSE}
 cook_boxcox = cooks.distance(fit_bic_boxcox)
 outlier_boxcox = which(cook_boxcox > 4 / n)
@@ -297,7 +293,7 @@ fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease[-
 ```
 
 ```{r, echo = FALSE, eval = FALSE}
-fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
+fit_bic_boxcox = step(fit_boxcox, direction = "both", trace = 0, k = log(n))
 ```
 
 Summary the new model.
@@ -306,7 +302,7 @@ Summary the new model.
 summary(fit_bic_boxcox)
 ```
 
-The new model has 10 predictors all of which are significant in the model. The $R^2$ is 0.757 in the model. The statistics of the model look pretty good.
+The new model has 10 predictors all of which are significant in the model. The $R^2$ is 0.692 in the model. The statistics of the model look pretty good.
 
 Then do the test on the model assumptions.
 
@@ -324,38 +320,67 @@ The Fitted Value vs Residual plot looks good, the **linear assumption** and **co
 
 Furthermore, the Breusch-Pagan test and Shapiro-Wilk test both have large p-value. None of the assumptions is violated.
 
+### Model Comparison
+
+The **Log** model and **Boxcox** model both looks good. Do some comparison to choose a better one.
+
 ```{r}
-calc_loocv_rmse(fit_bic_boxcox)
-calc_loocv_rmse(fit_bic_log_add)
+all.equal(rownames(coef(fit_bic_log_add)), rownames(coef(fit_bic_boxcox)))
 ```
+
+The predictors in both model are exactly the same.
+
+```{r}
+summary(fit_bic_log_add)$r.squared
+summary(fit_bic_boxcox)$r.squared
+```
+
+**Log** model has a comparatively larger $R^2$ value, but the different is insignificant between the models. Therefore, Look at other statistics.
+
+The **Boxcox** model have larger p-values in both **Breusch-Pagan test** and **Shaprio-Wilk test**. In this case, the **Boxcox** model may be slightly better.
+
+Do the cross validation using $RMSE_{LOOCV}$.
+
+```{r}
+calc_loocv_rmse(fit_bic_log_add)
+calc_loocv_rmse(fit_bic_boxcox)
+```
+
+**Boxcox** model also has a smaller $RMSE_{LOOCV}$. Hence, the **Boxcox** model is preferred.
+
+This is within expection. The **Log** transformation is actually part of **Boxcox** method. When $\lambda$ of **Boxcox** equals to $0$, the *Boxcox* transformation goes into a **log** form. In the previous **Boxcox** plot, we notice that $0$ is not in 95% interval, so **log** may not be a best transformation.
+
+### Exhaustive Search
+
+Because the **backward step search** may miss the best model due to its algorithm, we want to use a **exhaustive search** to verity if there is a better model.
 
 ```{r}
 all_mod = summary(regsubsets(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease, nvmax = 20))
-all_mod$which
+```
+
+Calculate the **BIC** of all models found by function `regsubsets`.
+
+```{r}
+exh_bic = n * log(all_mod$rss / n) + log(n) * (2:p)
 ```
 
 ```{r}
-all_mod$adjr2
-which.max(all_mod$adjr2)
-all_mod$adjr2[which.max(all_mod$adjr2)]
-```
-
-```{r}
-fit_exh_bic = n * log(all_mod$rss / n) + log(n) * (2:p)
-```
-```{r}
-which.min(fit_exh_bic)
-all_mod$which[which.min(fit_exh_bic),]
-```
-
-```{r}
-plot(fit_exh_bic ~ I(2:p), ylab = "BIC", xlab = "p, number of parameters", 
+plot(exh_bic ~ I(2:p), ylab = "BIC", xlab = "p, number of parameters", 
      pch = 20, col = "dodgerblue", type = "b", cex = 2,
      main = "BIC vs Model Complexity")
 ```
 
+The plot above shows the **BIC** of models with different number of parameters found by `regsubsets`
 
+```{r}
+which.min(exh_bic)
+all_mod$which[which.min(exh_bic),][all_mod$which[which.min(exh_bic),]]
+```
 
-**Conclusion**
+The model found by **exhausitive search** has the same response and predictors as the model found by **backward search**. Therefore, the two different methods lead to exactly the same model.
 
+### Conclusion
 
+The best proper model found in the project is the one uses $Disease.Severity^{-0.25} - 1 \over -0.25$ as response and `PCDH12`,`DLG5`,`SHISA5`,`AF161342`,`CARKD`,`F2R`,`PHKG1`,`PLEKHM1`,`PPAN`,`C14orf143` as predictors. The model has a $R^2$ value `0.6922`.
+
+For further improvement, I would suggest to add interaction or polynomial terms in the predicors. The more terms in the predictors will improve the accuracy of prediction, but as a tradeoff, this will make the model complex and hard to interpret. The choice of variables should be based on the need of the model.
