@@ -53,13 +53,15 @@ calc_loocv_rmse = function(model) {
 
 ### Summary Statistics and Data Visualization
 
-First, we look at the variales of the data frame.
+First, look at the variales of the data frame.
 
 ```{r}
 str(disease)
 ```
 
-We noticed that `X` variable is the index of observations. In this case, the data of different patients is independent with the index, so we remove `X` from the data frame.
+`X` variable is the index of observations. In this case, the data of different patients is independent with the index, so remove `X` from the data frame.
+
+Besides, there is no factor variable in the dataset, so the model will not have dummy variables.
 
 ```{r}
 disease = subset(disease, select = - X)
@@ -170,12 +172,18 @@ p = length(coef(fit_full_add))
 
 ```{r}
 cook_full_add = cooks.distance(fit_full_add)
-outlier_full_add = which(cook_full_add > 4 / n)
-cook_full_add[outlier_full_add]
+outlier = which(cook_full_add > 4 / n)
+cook_full_add[outlier]
+```
+
+Because all of our model is based on the full linear model, we drop the unusual influential observations based on the full linear model.
+
+```{r}
+disease = disease[-outlier,]
 ```
 
 ```{r}
-fit_full_add = lm(Disease.Severity ~ ., data = disease[-outlier_full_add,])
+fit_full_add = lm(Disease.Severity ~ ., data = disease)
 ```
 
 Now, we removed the unusual observations and let's look back intto the two plots. 
@@ -216,19 +224,18 @@ We fit a full log model and then use **BIC** to find a proper smaller model.
 fit_bic_log_add = step(fit_full_log_add, direction = "backward", k = log(n), trace = 0)
 ```
 
-```{r}
+```{r, echo = FALSE, eval = FALSE}
 cook_bic_log = cooks.distance(fit_bic_log_add)
 outlier_log_add = which(cook_bic_log > 4 / n)
 cook_bic_log[outlier_full_add]
 ```
 
-The **Cook's Distance** tells that there are some influential observations in the dataset, so we remove them to get a better estimation.
 
-```{r}
+```{r, echo = FALSE, eval = FALSE}
 fit_full_log_add = lm(log(Disease.Severity) ~ ., data = disease[-outlier_log_add, ])
 ```
 
-```{r}
+```{r, echo = FALSE, eval = FALSE}
 fit_bic_log_add = step(fit_full_log_add, direction = "backward", trace = 0, k = log(n))
 ```
 
@@ -280,16 +287,16 @@ fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
 
 Again, us **Cook's Distance** to identify and remove the influential unusual observations. Rebuild the model based on the modified dataset.
 
-```{r}
+```{r, echo = FALSE, eval = FALSE}
 cook_boxcox = cooks.distance(fit_bic_boxcox)
 outlier_boxcox = which(cook_boxcox > 4 / n)
 ```
 
-```{r}
+```{r, echo = FALSE, eval = FALSE}
 fit_boxcox = lm(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease[-outlier_boxcox,])
 ```
 
-```{r}
+```{r, echo = FALSE, eval = FALSE}
 fit_bic_boxcox = step(fit_boxcox, direction = "backward", trace = 0, k = log(n))
 ```
 
@@ -317,7 +324,37 @@ The Fitted Value vs Residual plot looks good, the **linear assumption** and **co
 
 Furthermore, the Breusch-Pagan test and Shapiro-Wilk test both have large p-value. None of the assumptions is violated.
 
-The $R^2$ of the model suggests that 75.7% of the data can be explained by this model. 
+```{r}
+calc_loocv_rmse(fit_bic_boxcox)
+calc_loocv_rmse(fit_bic_log_add)
+```
+
+```{r}
+all_mod = summary(regsubsets(((Disease.Severity^(-0.25) - 1) / (-0.25)) ~ ., data = disease, nvmax = 20))
+all_mod$which
+```
+
+```{r}
+all_mod$adjr2
+which.max(all_mod$adjr2)
+all_mod$adjr2[which.max(all_mod$adjr2)]
+```
+
+```{r}
+fit_exh_bic = n * log(all_mod$rss / n) + log(n) * (2:p)
+```
+```{r}
+which.min(fit_exh_bic)
+all_mod$which[which.min(fit_exh_bic),]
+```
+
+```{r}
+plot(fit_exh_bic ~ I(2:p), ylab = "BIC", xlab = "p, number of parameters", 
+     pch = 20, col = "dodgerblue", type = "b", cex = 2,
+     main = "BIC vs Model Complexity")
+```
+
+
 
 **Conclusion**
 
