@@ -138,9 +138,9 @@ abline(lm(resid(fit_full_without_PLEKHM1) ~ resid(fit_PLEKHM1)),
        col = "darkorange", lwd = 2)
 ```
 
-The partial correlation coefficients of both predictors are unignorable. The variable added plots also show that the variations of `F2R` and `PLEKHM1` have correlation with other predictors. This means that their variations are explained by other predictors. Hence, we prefer to keep these two predictors in the model.
+The partial correlation coefficients of both predictors are unignorable. The variable added plots also show that the variations of `F2R` and `PLEKHM1` have correlation with other predictors. This means that their variations are unexplained by other predictors. Hence, we prefer to keep these two predictors in the model.
 
-**Fit the Full Model**
+### Full Model
 
 We try to fit the full additive model.
 
@@ -202,7 +202,7 @@ However, the plots tells that the smaller additive model is again terrible. This
 
 In the next few sections, we will perform response transformation to find a better model.
 
-**Log model**
+### Log mode
 
 The Fitted Value vs Residual plot shown above suggests that a **log-transformation** on response may be helpful.
 
@@ -257,7 +257,8 @@ The Fitted Value vs Residual plot and Q-Q plot look good. Furthermore, the **Bre
 
 In the following section, we will use **Boxcox Method** to find if there is a better response transformation.
 
-**Boxcox model**
+### Boxcox model
+
 
 ```{r}
 boxcox(fit_full_add, plotit = TRUE, lambda = seq(-0.5, 0, by = 0.05))
